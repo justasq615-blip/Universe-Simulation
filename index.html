@@ -1,44 +1,89 @@
-import numpy as np
-import matplotlib.pyplot as plt
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Faasidiagramm</title>
+</head>
+<body>
 
-# --- parameetrid ---
-alpha = 0.6   # tugevnemine
-beta = 0.3    # hääbumine
-dt = 0.01
-T = 20
-steps = int(T / dt)
+<canvas id="canvas" width="500" height="500"></canvas>
 
-# --- algvõrk (N sõlme) ---
-N = 6
-np.random.seed(1)
-W = np.random.uniform(0.05, 0.2, (N, N))
+<script>
+const N = 5;
+const steps = 200;
 
-# diagonaal nulliks (ei tugevda iseennast)
-np.fill_diagonal(W, 0)
+function randomMatrix(n){
+  let W = [];
+  for(let i=0;i<n;i++){
+    W[i] = [];
+    for(let j=0;j<n;j++){
+      W[i][j] = Math.random()*0.2;
+    }
+    W[i][i] = 0;
+  }
+  return W;
+}
 
-# salvestus
-history = np.zeros((steps, N, N))
+function matMul(A){
+  let n = A.length;
+  let R = Array.from({length:n},()=>Array(n).fill(0));
 
-# --- simulatsioon ---
-for t in range(steps):
-    W2 = W @ W  # kaudsed teed (W^2)
+  for(let i=0;i<n;i++){
+    for(let j=0;j<n;j++){
+      for(let k=0;k<n;k++){
+        R[i][j] += A[i][k]*A[k][j];
+      }
+    }
+  }
+  return R;
+}
 
-    dW = alpha * W2 - beta * W
+function simulate(alpha,beta){
+  let W = randomMatrix(N);
 
-    W = W + dt * dW
+  for(let t=0;t<steps;t++){
+    let W2 = matMul(W);
 
-    # vältida negatiivseid ja hoida stabiilsust
-    W = np.clip(W, 0, 5)
+    for(let i=0;i<N;i++){
+      for(let j=0;j<N;j++){
+        W[i][j] += 0.01*(alpha*W2[i][j] - beta*W[i][j]);
+        W[i][j] = Math.max(0, Math.min(5, W[i][j]));
+      }
+    }
+  }
 
-    history[t] = W
+  let sum = 0;
+  for(let i=0;i<N;i++){
+    for(let j=0;j<N;j++){
+      sum += W[i][j];
+    }
+  }
+  return sum/(N*N);
+}
 
-# --- analüüs: keskmine tihedus ajas ---
-density = history.mean(axis=(1,2))
+// lihtne visual (üks tulemus)
+let alpha = 0.8;
+let beta = 0.3;
 
-plt.figure()
-plt.plot(density)
-plt.title("Võrgustiku keskmine tugevus ajas")
-plt.xlabel("aeg")
-plt.ylabel("keskmine W")
-plt.grid()
-plt.show()
+let result = simulate(alpha,beta);
+
+let canvas = document.getElementById("canvas");
+let ctx = canvas.getContext("2d");
+
+if(result < 0.2){
+  ctx.fillStyle = "blue";
+} else if(result < 1){
+  ctx.fillStyle = "green";
+} else {
+  ctx.fillStyle = "red";
+}
+
+ctx.fillRect(0,0,500,500);
+
+ctx.fillStyle = "white";
+ctx.font = "20px Arial";
+ctx.fillText("result: " + result.toFixed(2), 50, 250);
+
+</script>
+
+</body>
+</html>
